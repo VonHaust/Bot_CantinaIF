@@ -1,0 +1,13 @@
+t = time.localtime()
+
+gc = gspread.service_account_from_dict(credentials)
+
+sh = gc.open("CantinaTest")
+
+confi_pedido = update.message.reply_text(f"Olá {update.message.from_user['first_name']}.""\nSeu pedido está sendo preparado.")
+
+goiaba = pd.DataFrame(sh.worksheet("Almoco").get_all_records())
+
+val_cell = sh.worksheet("Almoco").acell
+
+uz = update.message.from_user
