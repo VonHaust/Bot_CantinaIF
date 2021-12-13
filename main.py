@@ -31,8 +31,7 @@ sh = gc.open("#NOME_DA_PLANILHA")
 #Acessando worksheets (páginas) específicas da planilha (variáveis globais):
 #Pega todos os dados da worksheet 1 (Menu)
 dados_menu = pd.DataFrame(sh.worksheet("#WORKSHEET_MENU").get_all_records())
-#Pega todos os dados da worksheet 2 (Almoço)
-dados_almoco = pd.DataFrame(sh.worksheet("#WORKSHEET_ALMOÇO").get_all_records())
+
 
 
 #Código que formata a saída das informações (texto ajustado para a esquerda e justificado)
@@ -88,9 +87,10 @@ def comandos_command(update, context):
         "\n /b - Salgados disponíveis na cantina;" 
         "\n /c - Doces disponíveis na cantina;"
         "\n /pedido - Realiza a solicitação de uma ficha de almoço. Deve ser escrito acompanhado do id do almoço que deseja reservar, ex: '/pedido 2';"
+        "\n /pedidos - Retorna uma lista em tempo real de todos os pedidos feitos;"
         "\n /reset - Retorna as fichas aos valores padrões. Limpa a lista de pedidos;"
         "\n /sobre - Trago informações sobre meus criadores;"
-        "\n /campus - Disponibiliza o link para o site oficial do IFBA - Campus Jacobina.all"
+        "\n /campus - Disponibiliza o link para o site oficial do IFBA - Campus Jacobina."
     )
 
 
@@ -98,7 +98,7 @@ def comandos_command(update, context):
 def sobre_command(update, context):
     update.message.reply_text(
         f"Este bot e suas propriedades foram desenvolvidos pelo grupo Quack Studios sob orientação da mestra em Ciência da Computação, Rebeca Barros."
-        "\nOs membros deste grupo são Matheus Oliveira e Marcella Portela, estudantes do Curso Técnico em Informática na instituição do IFBA - Campus Jacobina."
+        "\nOs membros desse grupo são Matheus Oliveira e Marcella Portela, estudantes do Curso Técnico em Informática na instituição do IFBA - Campus Jacobina."
     )
 
 
@@ -106,8 +106,8 @@ def sobre_command(update, context):
 def campus_command(update, context):
     update.message.reply_text(
         f"Este é o link para o site oficial do Campus Jacobina: "
-        "\n https://portal.ifba.edu.br/jacobina")
-
+        "\n https://portal.ifba.edu.br/jacobina"
+    )
 
 
     #Comando '/menu'
@@ -148,6 +148,12 @@ def C_command(update, context):
 
     #Comando '/almoco'
 def almoco_command(update, context):
+    #Pega todos os dados da worksheet 2 (Almoço)
+    dados_almoco = pd.DataFrame(sh.worksheet("#WORKSHEET_ALMOÇO").get_all_records())
+
+    #Define a coluna "id" como index
+    dados_almoco.set_index("id", inplace=True)
+
     if dia_semana == 1:
         #Pega apenas os dados em que o dia = segunda
         almoco_dia = dados_almoco.loc[dados_almoco['Dia'] == 'Segunda']
@@ -170,6 +176,7 @@ def almoco_command(update, context):
             f"  Olá {update.message.from_user['first_name']}."
             "\n \nA cantina não disponibiliza seus serviços durante os fins de semana. \n \nPor favor aguarde o próximo dia útil."
         )
+
     update.message.reply_text("Os pratos do dia são: \n{}".format(col))
 
 
@@ -199,9 +206,7 @@ def realizar_pedido(dia, id_pedido, nome_usuario, sobrenome_usuario):
       else:
           df.loc[(df['id'] == id_pedido),'Fichas'] -= 1
           pedidos = pedidos.append({'Nome': nome_usuario, 'Sobrenome': sobrenome_usuario, 'Nome do Prato': prato}, ignore_index=True)
-           #atualiza a página Almoco com o dataframe atualizado
-          set_with_dataframe(sh.worksheet("#WORKSHEET_ALMOÇO"), df)
-           #o mesmo, mas para a página "Pedidos"
+          set_with_dataframe(sh.worksheet("#WORKSHEET_ALMOÇO"), df) #atualiza a planilha Almoco com o dataframe atualizado
           set_with_dataframe(sh.worksheet("#WORKSHEET_PEDIDOS"), pedidos)
           return True
     else:
@@ -224,7 +229,7 @@ def pedido_command(update, context):
               update.message.reply_text(f"Olá {nome_usuario}.""\n \n A cantina não disponibiliza seus serviços durante os fins de semana. \n \n Por favor aguarde o próximo dia útil.")
           else:
               #Se a hora for maior/igual à 7AM E menor/igual à 15PM (também aceita pedidos até 15:59)
-            if (hora_pedido >= 7 and hora_pedido <= 15): 
+            if (hora_pedido >= 1 and hora_pedido <= 15): 
               pedido_realizado = realizar_pedido(dias[dia_semana], id_pedido, nome_usuario, sobrenome_usuario)
               if pedido_realizado: #retorna True se o pedido foi realizado
                 update.message.reply_text(f"Olá {nome_usuario}.""\nSeu pedido está sendo preparado. Após 30 minutos se dirija à cantina para a retirada.")    
@@ -244,7 +249,7 @@ def pedido_command(update, context):
 
 def reset_fichas(update, context): 
   #Se o horário for antes de 7AM ou depois de 15PM, pega a worksheet almoço (onde ficam o número das fichas) e diminui -1 no total que está lá.
-  if (hora_pedido < 7 or hora_pedido > 15):
+  if (hora_pedido < 12 or hora_pedido > 15):
     tabela_almoco = get_as_dataframe(sh.worksheet("#WORKSHEET_ALMOÇO"))
     #Trava na coluna "Fichas" que é onde estão os números
     tabela_almoco.loc[tabela_almoco['Fichas'] != 10, 'Fichas'] = 10
@@ -275,12 +280,12 @@ def main():
     dp.add_handler(CommandHandler("A", A_command))
     dp.add_handler(CommandHandler("B", B_command))
     dp.add_handler(CommandHandler("C", C_command))
-
     dp.add_handler(CommandHandler("reset", reset_fichas))
     dp.add_handler(CommandHandler("pedidos", pedidos_command))
     dp.add_handler(CommandHandler("almoco", almoco_command))
-    #dp.add_handler(MessageHandler(Filters.text, handle_message))
+    
     dp.add_handler(MessageHandler(Filters.command, unknown))
+
     updater.start_polling()
     updater.idle()
 
