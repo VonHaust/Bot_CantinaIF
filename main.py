@@ -7,7 +7,7 @@ import pandas as pd
 import functools
 from datetime import datetime
 from pytz import timezone
-
+ 
 #Definição do horário
 data_e_hor_serv = datetime.now()
 fuso_horario = timezone('America/Sao_Paulo')
